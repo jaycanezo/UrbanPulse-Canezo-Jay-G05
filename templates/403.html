@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Access Restricted | Urban Pulse{% endblock %}
+
+{% block content %}
+<div class="card card-elevated error-shell">
+    <div class="error-code">403</div>
+    <h1 style="font-size: 1.5rem; margin-bottom: 0.5rem;">Access Restricted</h1>
+    <p style="color: var(--ink-secondary); margin-bottom: 1.5rem;">
+        Your current Urban Pulse account role does not have permission to open this workspace. Return to your assigned civic dashboard below.
+    </p>
+    <a href="{% url 'dashboard_redirect' %}" class="btn btn-primary">Return to My Dashboard</a>
+</div>
+{% endblock %}

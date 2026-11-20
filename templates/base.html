@@ -1,24 +1,264 @@
+{% load static %}
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
-    <title>Urban Pulse</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Urban Pulse — Civic Infrastructure Platform{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/urbanpulse.css' %}">
 </head>
+<body class="{% block body_class %}{% endblock %}">
+    {% block layout %}
+        <header class="topbar">
+            <div class="topbar-inner">
+                <a href="{% url 'dashboard_redirect' %}" class="brand-link">
+                    <span class="brand-mark" aria-hidden="true">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 20h18"/>
+                            <path d="M5 20V11l4-3 4 3v9"/>
+                            <path d="M13 20v-6l3-2 3 2v6"/>
+                            <path d="M2 12h4l2-4 3 8 2-4h9"/>
+                        </svg>
+                    </span>
+                    <span class="brand-text">
+                        <span class="brand-name">Urban Pulse</span>
+                        <span class="brand-sub">Civic Infrastructure</span>
+                    </span>
+                </a>
 
-<body>
-    <nav>
-        {% if user.is_authenticated %}
-        Hi, {{ user.username }}!
-        <form method="post" action="{% url 'logout' %}">
-            {% csrf_token %}
-            <button type="submit">Log out</button>
-        </form>
-        {% else %}
-        <a href="{% url 'login' %}">Log in</a>
-        <a href="{% url 'signup' %}">Sign up</a>
-        {% endif %}
-    </nav>
-    <main>{% block content %}{% endblock %}</main>
+                <nav class="nav-group" aria-label="Primary Navigation">
+                    {% if user.is_authenticated %}
+                        {% with url_name=request.resolver_match.url_name %}
+                            {% if user.is_lgu_admin %}
+                                <a href="{% url 'admin_panel' %}" class="nav-link {% if url_name == 'admin_panel' %}active{% endif %}">
+                                    LGU Dispatch Console
+                                </a>
+                            {% else %}
+                                <a href="{% url 'dashboard' %}" class="nav-link {% if url_name == 'dashboard' %}active{% endif %}">
+                                    Citizen Dashboard
+                                </a>
+                            {% endif %}
+                            <a href="{% url 'profile' %}" class="nav-link {% if url_name == 'profile' or url_name == 'profile_edit' %}active{% endif %}">
+                                My Profile
+                            </a>
+                        {% endwith %}
+
+                        <span class="nav-divider" aria-hidden="true"></span>
+
+                        <a href="{% url 'profile' %}" class="user-chip" title="{{ user.get_role_display }}">
+                            {% if user.profile_photo %}
+                                <img src="{{ user.profile_photo.url }}" alt="{{ user.username }}" class="avatar-sm">
+                            {% else %}
+                                <span class="avatar-sm">{{ user.initials }}</span>
+                            {% endif %}
+                            <span>{{ user.first_name|default:user.username }}</span>
+                        </a>
+
+                        <form method="post" action="{% url 'logout' %}" class="nav-logout-form">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-ghost">Log out</button>
+                        </form>
+                    {% else %}
+                        <a href="{% url 'login' %}" class="nav-link">Log in</a>
+                        <a href="{% url 'signup' %}" class="btn btn-primary">Join Urban Pulse</a>
+                    {% endif %}
+                </nav>
+            </div>
+        </header>
+
+        <main class="app-container">
+            {% if messages %}
+                <div class="alerts-stack" role="status" aria-live="polite">
+                    {% for message in messages %}
+                        <div class="alert {% if 'error' in message.tags %}alert-error{% elif 'info' in message.tags %}alert-info{% else %}alert-success{% endif %}">
+                            <div class="alert-body">
+                                <span class="alert-icon" aria-hidden="true">
+                                    {% if 'error' in message.tags %}&#9888;{% else %}&#10003;{% endif %}
+                                </span>
+                                <span>{{ message }}</span>
+                            </div>
+                            <button type="button" class="alert-close js-close-alert" aria-label="Dismiss message">&times;</button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            {% block content %}{% endblock %}
+        </main>
+
+        <footer class="app-footer">
+            Urban Pulse · Connecting Residents and Local Government Units for Transparent Public Infrastructure
+        </footer>
+    {% endblock %}
+
+    <script>
+        document.addEventListener("click", function (event) {
+            const closeBtn = event.target.closest(".js-close-alert");
+            if (closeBtn) {
+                const alertEl = closeBtn.closest(".alert");
+                if (alertEl) alertEl.remove();
+                return;
+            }
+
+            const toggleBtn = event.target.closest(".js-toggle-password");
+            if (toggleBtn) {
+                const wrap = toggleBtn.closest(".password-wrap");
+                const input = wrap ? wrap.querySelector("input") : null;
+                if (input) {
+                    const isHidden = input.type === "password";
+                    input.type = isHidden ? "text" : "password";
+                    toggleBtn.textContent = isHidden ? "Hide" : "Show";
+                }
+            }
+        });
+
+        const photoInput = document.querySelector(".js-photo-input");
+        const photoPreview = document.querySelector(".js-photo-preview");
+        if (photoInput && photoPreview) {
+            photoInput.addEventListener("change", function () {
+                const file = photoInput.files && photoInput.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    if (photoPreview.tagName === "IMG") {
+                        photoPreview.src = e.target.result;
+                    } else {
+                        const img = document.createElement("img");
+                        img.src = e.target.result;
+                        img.alt = "Selected profile photo";
+                        img.className = "avatar-lg js-photo-preview";
+                        photoPreview.replaceWith(img);
+                    }
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        document.addEventListener("input", function (event) {
+            const input = event.target.closest("[data-filter]");
+            if (!input) return;
+            const kind = input.getAttribute("data-filter");
+            const raw = input.value;
+            let cleaned = raw;
+
+            if (kind === "phone") {
+                const hasLeadingPlus = raw.startsWith("+");
+                cleaned = (hasLeadingPlus ? "+" : "") + raw.replace(/[^\d\s\-()]/g, "");
+            } else if (kind === "name") {
+                cleaned = raw.replace(/[0-9@#$%^&*=_+[\]{}|\\;:"<>/?~`!]/g, "");
+            } else if (kind === "username") {
+                cleaned = raw.replace(/[^A-Za-z0-9_.+-]/g, "");
+            }
+
+            if (cleaned !== raw) {
+                const pos = input.selectionStart;
+                input.value = cleaned;
+                if (typeof pos === "number") {
+                    const nextPos = Math.max(0, pos - (raw.length - cleaned.length));
+                    input.setSelectionRange(nextPos, nextPos);
+                }
+            }
+        });
+
+        (function initInlineValidation() {
+            function getFieldLabel(input) {
+                if (input.id) {
+                    const label = document.querySelector('label[for="' + input.id + '"]');
+                    if (label) return label.textContent.trim();
+                }
+                return "value";
+            }
+
+            function getErrorMessage(input, form) {
+                const label = getFieldLabel(input);
+                if (input.validity.valueMissing) {
+                    return label === "value" ? "Please enter a value." : "Please enter your " + label + ".";
+                }
+                if (input.validity.typeMismatch && input.type === "email") {
+                    return "Please enter a valid email address (e.g., you@example.com).";
+                }
+                if (input.validity.tooShort) {
+                    return label + " must be at least " + input.minLength + " characters.";
+                }
+                if (input.validity.patternMismatch) {
+                    return input.title || "Please check the format of this field.";
+                }
+                if (input.name === "password2" && input.value) {
+                    const p1 = form.querySelector('input[name="password1"]');
+                    if (p1 && p1.value !== input.value) {
+                        return "Passwords do not match.";
+                    }
+                }
+                return "";
+            }
+
+            function setFieldError(input, message) {
+                const group = input.closest(".field-group");
+                if (!group) return;
+                group.querySelectorAll(".field-error").forEach(function (el) {
+                    el.remove();
+                });
+
+                if (message) {
+                    input.classList.add("is-invalid");
+                    input.setAttribute("aria-invalid", "true");
+                    const span = document.createElement("span");
+                    span.className = "field-error js-client-error";
+                    span.setAttribute("role", "alert");
+                    span.innerHTML = '<span aria-hidden="true">&#9888;</span>';
+                    const textNode = document.createElement("span");
+                    textNode.textContent = message;
+                    span.appendChild(textNode);
+                    group.appendChild(span);
+                } else {
+                    input.classList.remove("is-invalid");
+                    input.removeAttribute("aria-invalid");
+                }
+            }
+
+            document.querySelectorAll("form.js-validated-form").forEach(function (form) {
+                const selector = 'input:not([type="hidden"]):not([type="checkbox"]):not([type="file"])';
+                const inputs = Array.from(form.querySelectorAll(selector));
+
+                inputs.forEach(function (input) {
+                    input.addEventListener("input", function () {
+                        if (input.classList.contains("is-invalid")) {
+                            setFieldError(input, getErrorMessage(input, form));
+                        }
+                        if (input.name === "password1") {
+                            const p2 = form.querySelector('input[name="password2"]');
+                            if (p2 && p2.value) {
+                                setFieldError(p2, getErrorMessage(p2, form));
+                            }
+                        }
+                    });
+
+                    input.addEventListener("blur", function () {
+                        if (input.value || input.classList.contains("is-invalid")) {
+                            setFieldError(input, getErrorMessage(input, form));
+                        }
+                    });
+                });
+
+                form.addEventListener("submit", function (event) {
+                    let firstInvalid = null;
+                    inputs.forEach(function (input) {
+                        const msg = getErrorMessage(input, form);
+                        setFieldError(input, msg);
+                        if (msg && !firstInvalid) {
+                            firstInvalid = input;
+                        }
+                    });
+                    if (firstInvalid) {
+                        event.preventDefault();
+                        firstInvalid.focus();
+                    }
+                });
+            });
+        })();
+    </script>
 </body>
-
 </html>

@@ -1,11 +1,93 @@
-{% extends "base.html" %} 
+{% extends "base.html" %}
+{% block title %}Citizen Dashboard | Urban Pulse{% endblock %}
+
 {% block content %}
-<h2>Welcome, {{ user.first_name|default:user.username }}!</h2>
-<ul>
-  <li>Role: {{ user.get_role_display }}</li>
-  <li>Last login: {{ user.last_login|date:"M d, Y" }}</li>
-</ul>
-{% if is_admin %}
-    <a href="{% url 'admin_panel' %}">Open admin panel</a>
-{% endif %} 
+<section class="page-header">
+    <div>
+        <div class="page-meta">
+            <span class="badge badge-teal">{{ user.get_role_display }}</span>
+            {% if user.barangay %}
+                <span class="badge badge-slate">Brgy. {{ user.barangay }}</span>
+            {% endif %}
+        </div>
+        <h1 class="page-title">Welcome, {{ user.first_name|default:user.username }}</h1>
+        <p class="page-subtitle">
+            Your neighborhood portal for transparent public infrastructure updates with your Local Government Unit.
+        </p>
+    </div>
+    <div class="hero-actions">
+        <a href="{% url 'profile_edit' %}" class="btn btn-primary">Edit Profile</a>
+    </div>
+</section>
+
+<section class="kpi-grid">
+    <div class="kpi-card">
+        <span class="kpi-label">Jurisdiction</span>
+        <div class="kpi-value" style="font-size: 1.35rem;">
+            {% if user.barangay %}Brgy. {{ user.barangay }}{% else %}Not Set{% endif %}
+        </div>
+        <span class="kpi-meta">Barangay for local hazard routing</span>
+    </div>
+
+    <div class="kpi-card">
+        <span class="kpi-label">Role</span>
+        <div class="kpi-value" style="font-size: 1.35rem;">{{ user.get_role_display }}</div>
+        <span class="kpi-meta">Member since {{ user.date_joined|date:"M d, Y" }}</span>
+    </div>
+
+    <div class="kpi-card">
+        <span class="kpi-label">Profile Setup</span>
+        <div class="kpi-value">{{ completion_pct }}%</div>
+        <span class="kpi-meta">{{ completed_steps }} of {{ total_steps }} steps complete</span>
+    </div>
+</section>
+
+<section class="workspace-grid">
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <h2 class="card-title">Hazard Reports</h2>
+                <p class="card-subtitle">Submit concerns and power up neighborhood priorities</p>
+            </div>
+            <span class="badge badge-teal">Coming in Phase 2</span>
+        </div>
+
+        <div class="empty-state">
+            <p style="margin: 0; font-size: 0.92rem; color: var(--ink-secondary);">
+                Your Citizen account is active and ready. Once the hazard reporting module launches, you will be able to submit photo-verified infrastructure issues, cast community power-up votes, and track live LGU repair statuses right here.
+            </p>
+        </div>
+    </div>
+
+    <aside class="card">
+        <div class="card-header">
+            <div>
+                <h2 class="card-title">Profile Setup</h2>
+                <p class="card-subtitle">{{ completed_steps }}/{{ total_steps }} complete</p>
+            </div>
+            <span class="badge {% if completion_pct == 100 %}badge-emerald{% else %}badge-amber{% endif %}">
+                {{ completion_pct }}%
+            </span>
+        </div>
+
+        <div class="progress-track" aria-label="Profile readiness progress">
+            <div class="progress-fill" style="width: {{ completion_pct }}%;"></div>
+        </div>
+
+        <ul class="checklist">
+            {% for item in checklist %}
+                <li class="checklist-item">
+                    <span class="check-dot {% if item.done %}done{% else %}pending{% endif %}" aria-hidden="true">
+                        {% if item.done %}&#10003;{% else %}&#8226;{% endif %}
+                    </span>
+                    <span class="checklist-title">{{ item.label }}</span>
+                </li>
+            {% endfor %}
+        </ul>
+
+        <div style="margin-top: 1rem;">
+            <a href="{% url 'profile_edit' %}" class="btn btn-secondary btn-block">Update Resident Details</a>
+        </div>
+    </aside>
+</section>
 {% endblock %}

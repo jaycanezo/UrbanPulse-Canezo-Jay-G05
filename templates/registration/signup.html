@@ -1,9 +1,144 @@
 {% extends "base.html" %}
-{% block content %}
-<h2>Create your account</h2>
-<form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Sign up</button>
-</form>
+{% block title %}Create Account | Urban Pulse{% endblock %}
+{% block body_class %}auth-page{% endblock %}
+
+{% block layout %}
+<div class="auth-shell">
+    <aside class="auth-brand-panel">
+        <div class="auth-brand-content">
+            <a href="{% url 'login' %}" class="brand-link" style="color: #fff; margin-bottom: 2.5rem;">
+                <span class="brand-mark" style="background: rgba(255,255,255,0.16);" aria-hidden="true">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 20h18"/>
+                        <path d="M5 20V11l4-3 4 3v9"/>
+                        <path d="M13 20v-6l3-2 3 2v6"/>
+                        <path d="M2 12h4l2-4 3 8 2-4h9"/>
+                    </svg>
+                </span>
+                <span class="brand-text">
+                    <span class="brand-name" style="color: #fff;">Urban Pulse</span>
+                    <span class="brand-sub" style="color: rgba(255,255,255,0.72);">Civic Infrastructure</span>
+                </span>
+            </a>
+
+            <h1 class="auth-headline">Built for citizens and local government, together.</h1>
+            <p class="auth-lead">
+                Create your resident account to report local hazards, unite with neighbors, and track public repairs in your barangay.
+            </p>
+
+            <div class="unity-strip">
+                <span>Report</span>
+                <span class="unity-dot">&bull;</span>
+                <span>Power Up</span>
+                <span class="unity-dot">&bull;</span>
+                <span>Resolve</span>
+            </div>
+        </div>
+
+        <div class="auth-brand-footer">
+            Add your Barangay and Contact Number later in My Profile
+        </div>
+    </aside>
+
+    <section class="auth-form-panel">
+        <div class="auth-card">
+            <div class="auth-card-header">
+                <h2>Create your account</h2>
+                <p>Join Urban Pulse as a Citizen.</p>
+            </div>
+
+            {% if messages %}
+                <div class="alerts-stack" role="status" aria-live="polite">
+                    {% for message in messages %}
+                        <div class="alert {% if 'error' in message.tags %}alert-error{% else %}alert-success{% endif %}">
+                            <div class="alert-body"><span>{{ message }}</span></div>
+                            <button type="button" class="alert-close js-close-alert" aria-label="Dismiss">&times;</button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            {% if form.non_field_errors %}
+                <div class="alert alert-error" role="alert" style="margin-bottom: 1rem;">
+                    <div class="alert-body">
+                        <div>
+                            {% for error in form.non_field_errors %}
+                                <div>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+
+            <form method="post" class="form-stack js-validated-form" novalidate>
+                {% csrf_token %}
+
+                <div class="form-grid-2">
+                    <div class="field-group">
+                        <label for="{{ form.first_name.id_for_label }}" class="field-label">First Name</label>
+                        {{ form.first_name }}
+                        {% for error in form.first_name.errors %}
+                            <span class="field-error">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+
+                    <div class="field-group">
+                        <label for="{{ form.last_name.id_for_label }}" class="field-label">Last Name</label>
+                        {{ form.last_name }}
+                        {% for error in form.last_name.errors %}
+                            <span class="field-error">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="field-group">
+                    <label for="{{ form.username.id_for_label }}" class="field-label">Username</label>
+                    {{ form.username }}
+                    {% for error in form.username.errors %}
+                        <span class="field-error">{{ error }}</span>
+                    {% endfor %}
+                </div>
+
+                <div class="field-group">
+                    <label for="{{ form.email.id_for_label }}" class="field-label">Email Address</label>
+                    {{ form.email }}
+                    {% for error in form.email.errors %}
+                        <span class="field-error">{{ error }}</span>
+                    {% endfor %}
+                </div>
+
+                <div class="field-group">
+                    <label for="{{ form.password1.id_for_label }}" class="field-label">Password</label>
+                    <div class="password-wrap">
+                        {{ form.password1 }}
+                        <button type="button" class="password-toggle js-toggle-password">Show</button>
+                    </div>
+                    <span class="field-help">At least 8 characters with letters and numbers.</span>
+                    {% for error in form.password1.errors %}
+                        <span class="field-error">{{ error }}</span>
+                    {% endfor %}
+                </div>
+
+                <div class="field-group">
+                    <label for="{{ form.password2.id_for_label }}" class="field-label">Confirm Password</label>
+                    <div class="password-wrap">
+                        {{ form.password2 }}
+                        <button type="button" class="password-toggle js-toggle-password">Show</button>
+                    </div>
+                    {% for error in form.password2.errors %}
+                        <span class="field-error">{{ error }}</span>
+                    {% endfor %}
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block" style="margin-top: 0.25rem;">
+                    Create Account
+                </button>
+            </form>
+
+            <div class="auth-switch">
+                Already have an account? <a href="{% url 'login' %}"><strong>Sign in</strong></a>
+            </div>
+        </div>
+    </section>
+</div>
 {% endblock %}
