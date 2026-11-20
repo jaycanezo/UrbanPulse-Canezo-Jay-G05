@@ -38,7 +38,13 @@
                                 </a>
                             {% else %}
                                 <a href="{% url 'dashboard' %}" class="nav-link {% if url_name == 'dashboard' %}active{% endif %}">
-                                    Citizen Dashboard
+                                    Dashboard
+                                </a>
+                                <a href="{% url 'report_list' %}" class="nav-link {% if url_name == 'report_list' or url_name == 'report_detail' or url_name == 'report_update' or url_name == 'report_delete' %}active{% endif %}">
+                                    Hazard Feed
+                                </a>
+                                <a href="{% url 'report_create' %}" class="nav-link {% if url_name == 'report_create' %}active{% endif %}">
+                                    Report Hazard
                                 </a>
                             {% endif %}
                             <a href="{% url 'profile' %}" class="nav-link {% if url_name == 'profile' or url_name == 'profile_edit' %}active{% endif %}">
@@ -175,6 +181,9 @@
             function getErrorMessage(input, form) {
                 const label = getFieldLabel(input);
                 if (input.validity.valueMissing) {
+                    if (input.tagName === "SELECT") {
+                        return "Please select a " + label + ".";
+                    }
                     return label === "value" ? "Please enter a value." : "Please enter your " + label + ".";
                 }
                 if (input.validity.typeMismatch && input.type === "email") {
@@ -220,12 +229,13 @@
             }
 
             document.querySelectorAll("form.js-validated-form").forEach(function (form) {
-                const selector = 'input:not([type="hidden"]):not([type="checkbox"]):not([type="file"])';
+                const selector = 'input:not([type="hidden"]):not([type="checkbox"]):not([type="file"]), select, textarea';
                 const inputs = Array.from(form.querySelectorAll(selector));
 
                 inputs.forEach(function (input) {
-                    input.addEventListener("input", function () {
-                        if (input.classList.contains("is-invalid")) {
+                    const liveEvent = input.tagName === "SELECT" ? "change" : "input";
+                    input.addEventListener(liveEvent, function () {
+                        if (input.classList.contains("is-invalid") || input.tagName === "SELECT") {
                             setFieldError(input, getErrorMessage(input, form));
                         }
                         if (input.name === "password1") {
