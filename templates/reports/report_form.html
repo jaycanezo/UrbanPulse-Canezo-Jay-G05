@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}{% if object %}Edit Report #{{ object.report_id }}{% else %}Report a Hazard{% endif %} | Urban Pulse{% endblock %}
+
+{% block content %}
+<div class="card card-elevated" style="max-width: 680px; margin: 0 auto;">
+    <div class="card-header">
+        <div>
+            <h1 class="card-title" style="font-size: 1.35rem;">
+                {% if object %}
+                    Edit Hazard Report #{{ object.report_id }}
+                {% else %}
+                    Report an Infrastructure Hazard
+                {% endif %}
+            </h1>
+            <p class="card-subtitle">
+                Provide the barangay, category, and clear street landmark so LGU teams can locate it quickly.
+            </p>
+        </div>
+    </div>
+
+    {% if form.non_field_errors %}
+        <div class="alert alert-error" role="alert" style="margin-bottom: 1rem;">
+            <div class="alert-body">
+                <div>
+                    {% for error in form.non_field_errors %}
+                        <div>{{ error }}</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" class="form-stack js-validated-form" novalidate>
+        {% csrf_token %}
+
+        <div class="form-grid-2">
+            <div class="field-group">
+                <label for="{{ form.barangay.id_for_label }}" class="field-label">
+                    {{ form.barangay.label }}
+                </label>
+                {{ form.barangay }}
+                {% for error in form.barangay.errors %}
+                    <span class="field-error">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="field-group">
+                <label for="{{ form.category.id_for_label }}" class="field-label">
+                    {{ form.category.label }}
+                </label>
+                {{ form.category }}
+                {% for error in form.category.errors %}
+                    <span class="field-error">{{ error }}</span>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="field-group">
+            <label for="{{ form.landmark_desc.id_for_label }}" class="field-label">
+                {{ form.landmark_desc.label }}
+            </label>
+            {{ form.landmark_desc }}
+            <span class="field-help">10-1000 characters. Include street name, corner, or nearby landmark.</span>
+            {% for error in form.landmark_desc.errors %}
+                <span class="field-error">{{ error }}</span>
+            {% endfor %}
+        </div>
+
+        <div class="field-group">
+            <label for="{{ form.photo.id_for_label }}" class="field-label">
+                {{ form.photo.label }}
+            </label>
+            {{ form.photo }}
+            <span class="field-help">JPG, PNG, or WEBP up to 5 MB.</span>
+            {% for error in form.photo.errors %}
+                <span class="field-error">{{ error }}</span>
+            {% endfor %}
+        </div>
+
+        {% if object and object.attachments.all %}
+            <div>
+                <div class="info-label">Current Photo Attachments</div>
+                <div class="attachment-grid">
+                    {% for att in object.attachments.all %}
+                        <img src="{{ att.file_url.url }}" alt="Hazard attachment" class="attachment-thumb">
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+
+        <div class="hero-actions" style="margin-top: 0.5rem;">
+            <button type="submit" class="btn btn-primary">
+                {% if object %}Save Changes{% else %}Submit Hazard Report{% endif %}
+            </button>
+            <a href="{% if object %}{% url 'report_detail' object.pk %}{% else %}{% url 'report_list' %}{% endif %}" class="btn btn-secondary">
+                Cancel
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}
