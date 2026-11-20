@@ -12,34 +12,34 @@
         </div>
         <h1 class="page-title">LGU Administrative Dispatch Console</h1>
         <p class="page-subtitle">
-            Signed in as {{ user.get_full_name|default:user.username }}. Prioritize urgent hazard reports and track resolution transparency.
+            Signed in as {{ user.get_full_name|default:user.username }}. Monitor resident accounts and coordinate municipal infrastructure operations.
         </p>
     </div>
     <div class="hero-actions">
-        <a href="{% url 'dispatch_queue' %}" class="btn btn-primary">Open Ticket Queue</a>
+        <a href="{% url 'profile' %}" class="btn btn-secondary">My LGU Profile</a>
         {% if user.is_staff %}
-            <a href="{% url 'admin:index' %}" class="btn btn-secondary">Django Admin</a>
+            <a href="{% url 'admin:index' %}" class="btn btn-primary">Django Admin</a>
         {% endif %}
     </div>
 </section>
 
 <section class="kpi-grid">
     <div class="kpi-card">
-        <span class="kpi-label">Pending Tickets</span>
-        <div class="kpi-value">{{ pending_reports }}</div>
-        <span class="kpi-meta">{{ in_progress_reports }} under review / scheduled</span>
+        <span class="kpi-label">Total Accounts</span>
+        <div class="kpi-value">{{ total_users }}</div>
+        <span class="kpi-meta">Registered on Urban Pulse</span>
     </div>
 
     <div class="kpi-card">
-        <span class="kpi-label">Resolved Tickets</span>
-        <div class="kpi-value">{{ resolved_reports }}</div>
-        <span class="kpi-meta">{{ total_reports }} total submitted</span>
-    </div>
-
-    <div class="kpi-card">
-        <span class="kpi-label">Active Citizens</span>
+        <span class="kpi-label">Citizens</span>
         <div class="kpi-value">{{ citizen_count }}</div>
-        <span class="kpi-meta">{{ total_users }} total accounts ({{ admin_count }} staff)</span>
+        <span class="kpi-meta">Community reporters</span>
+    </div>
+
+    <div class="kpi-card">
+        <span class="kpi-label">LGU Staff</span>
+        <div class="kpi-value">{{ admin_count }}</div>
+        <span class="kpi-meta">Authorized dispatchers</span>
     </div>
 
     <div class="kpi-card">
@@ -51,58 +51,6 @@
 
 <section class="workspace-grid">
     <div class="card">
-        <div class="card-header">
-            <div>
-                <h2 class="card-title">Priority Unresolved Queue</h2>
-                <p class="card-subtitle">Top open tickets ranked by community power-up votes</p>
-            </div>
-            <a href="{% url 'dispatch_queue' %}" class="btn btn-ghost">Full Queue</a>
-        </div>
-
-        {% if priority_reports %}
-            <div class="table-wrap">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Ticket</th>
-                            <th>Barangay</th>
-                            <th>Votes</th>
-                            <th>Status</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for report in priority_reports %}
-                            <tr>
-                                <td>
-                                    <strong>#{{ report.report_id }} &mdash; {{ report.category.name }}</strong>
-                                    <div style="font-size: 0.78rem; color: var(--ink-muted);">
-                                        {{ report.landmark_desc|truncatechars:55 }}
-                                    </div>
-                                </td>
-                                <td>{{ report.barangay.name }}</td>
-                                <td><span class="badge badge-amber">&#9650; {{ report.vote_count }}</span></td>
-                                <td><span class="badge status-{{ report.status|lower }}">{{ report.get_status_display }}</span></td>
-                                <td>
-                                    <a href="{% url 'dispatch_resolve' report.pk %}" class="btn btn-secondary" style="padding: 0.35rem 0.7rem;">
-                                        Resolve
-                                    </a>
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        {% else %}
-            <div class="empty-state">
-                <p style="margin: 0; font-size: 0.9rem; color: var(--ink-secondary);">
-                    All submitted hazard reports are currently resolved or cancelled.
-                </p>
-            </div>
-        {% endif %}
-    </div>
-
-    <aside class="card">
         <div class="card-header">
             <div>
                 <h2 class="card-title">Recent Accounts</h2>
@@ -117,6 +65,7 @@
                     <tr>
                         <th>User</th>
                         <th>Role</th>
+                        <th>Barangay / Dept</th>
                         <th>Joined</th>
                     </tr>
                 </thead>
@@ -132,15 +81,38 @@
                                     {{ account.get_role_display }}
                                 </span>
                             </td>
+                            <td>
+                                {% if account.is_lgu_admin %}
+                                    {{ account.department|default:"Municipal Dispatch" }}
+                                {% else %}
+                                    {{ account.barangay|default:"—" }}
+                                {% endif %}
+                            </td>
                             <td>{{ account.date_joined|date:"M d, Y" }}</td>
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="3" style="text-align: center; color: var(--ink-muted);">No users found yet.</td>
+                            <td colspan="4" style="text-align: center; color: var(--ink-muted);">No users found yet.</td>
                         </tr>
                     {% endfor %}
                 </tbody>
             </table>
+        </div>
+    </div>
+
+    <aside class="card">
+        <div class="card-header">
+            <div>
+                <h2 class="card-title">Dispatch Queue</h2>
+                <p class="card-subtitle">Municipal ticket workflow</p>
+            </div>
+            <span class="badge badge-teal">Coming in Phase 2</span>
+        </div>
+
+        <div class="empty-state">
+            <p style="margin: 0; font-size: 0.9rem; color: var(--ink-secondary);">
+                Prioritized hazard reports, Barangay and Category filters, and timestamped status updates (Pending, Review, Scheduled, Resolved) will appear here once Phase 2 ticketing is connected.
+            </p>
         </div>
     </aside>
 </section>
