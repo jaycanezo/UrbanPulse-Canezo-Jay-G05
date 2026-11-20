@@ -4,7 +4,7 @@ from django.core.validators import FileExtensionValidator
 from accounts.forms import _CivicValidatedFormMixin, _style_form_fields
 
 from .models import Barangay, HazardCategory, HazardReport
-from .validators import validate_attachment_file, validate_landmark_desc
+from .validators import validate_attachment_file, validate_dispatch_remarks, validate_landmark_desc
 
 
 class HazardReportForm(_CivicValidatedFormMixin, forms.ModelForm):
@@ -90,3 +90,53 @@ class ReportFilterForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         _style_form_fields(self)
+
+
+class AdminStatusUpdateForm(_CivicValidatedFormMixin, forms.Form):
+    """LGU Admin form to update ticket status and log transparent dispatch remarks."""
+
+    new_status = forms.ChoiceField(
+        label="New Ticket Status",
+        choices=HazardReport.Status.choices,
+    )
+    remarks = forms.CharField(
+        label="Dispatch / Resolution Remarks",
+        required=False,
+        widget=forms.Textarea(
+            attrs={
+                "rows": 3,
+                "maxlength": "500",
+                "placeholder": "Explain the dispatch action, schedule, or resolution details...",
+            }
+        ),
+    )
+
+    def __init__(self, *args, current_status=None, **kwargs):
+        self.current_status = current_status
+        super().__init__(*args, **kwargs)
+        if current_status and not self.is_bound:
+            self.fields["new_status"].initial = current_status
+        _style_form_fields(self)
+
+    def clean_remarks(self):
+        cleaned = " ".join((self.cleaned_data.get("remarks") or "").split())
+        validate_dispatch_remarks(cleaned)
+        return cleaned
+
+    def clean(self):
+        cleaned_data = super().clean()
+        new_status = cleaned_data.get("new_status")
+        remarks = cleaned_data.get("remarks", "")
+
+        if new_status and self.current_status and new_status == self.current_status:
+            self.add_error(
+                "new_status",
+                "Please choose a different status than the current one.",
+            )
+
+        if new_status in {HazardReport.Status.RESOLVED, HazardReport.Status.CANCELLED} and not remarks:
+            self.add_error(
+                "remarks",
+                "Please provide resolution or cancellation remarks for citizen transparency.",
+            )
+        return cleaned_data

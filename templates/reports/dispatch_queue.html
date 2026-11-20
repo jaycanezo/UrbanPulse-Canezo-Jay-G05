@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}LGU Dispatch Queue | Urban Pulse{% endblock %}
+
+{% block content %}
+<section class="page-header page-header-lgu">
+    <div>
+        <div class="page-meta">
+            <span class="badge badge-amber">LGU Triage &amp; Dispatch</span>
+        </div>
+        <h1 class="page-title">Infrastructure Hazard Queue</h1>
+        <p class="page-subtitle">
+            Prioritized by unresolved status and community power-up votes across barangays.
+        </p>
+    </div>
+    <div class="hero-actions">
+        <a href="{% url 'admin_panel' %}" class="btn btn-secondary">Back to Console</a>
+    </div>
+</section>
+
+<form method="get" class="card filter-bar" style="grid-template-columns: 1.2fr 1fr 1fr 1fr auto;">
+    <div class="field-group">
+        <label for="id_q" class="field-label">Search Landmark / Issue</label>
+        <input type="text" name="q" id="id_q" value="{{ search_query }}" class="form-input" placeholder="Street, landmark, barangay...">
+    </div>
+    <div class="field-group">
+        <label for="id_barangay" class="field-label">Barangay</label>
+        {{ filter_form.barangay }}
+    </div>
+    <div class="field-group">
+        <label for="id_category" class="field-label">Category</label>
+        {{ filter_form.category }}
+    </div>
+    <div class="field-group">
+        <label for="id_status" class="field-label">Status</label>
+        {{ filter_form.status }}
+    </div>
+    <div class="hero-actions">
+        <button type="submit" class="btn btn-primary">Filter</button>
+        <a href="{% url 'dispatch_queue' %}" class="btn btn-ghost">Reset</a>
+    </div>
+</form>
+
+<div class="card">
+    <div class="table-wrap">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Ticket</th>
+                    <th>Barangay</th>
+                    <th>Reporter</th>
+                    <th>Power-Ups</th>
+                    <th>Status</th>
+                    <th>Submitted</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for report in reports %}
+                    <tr>
+                        <td>
+                            <strong>#{{ report.report_id }} &mdash; {{ report.category.name }}</strong>
+                            <div style="font-size: 0.78rem; color: var(--ink-muted);">
+                                {{ report.landmark_desc|truncatechars:70 }}
+                            </div>
+                        </td>
+                        <td>{{ report.barangay.name }}</td>
+                        <td>
+                            {% if report.user %}
+                                {{ report.user.get_full_name|default:report.user.username }}
+                            {% else %}
+                                Anonymous Citizen
+                            {% endif %}
+                        </td>
+                        <td><span class="badge badge-amber">&#9650; {{ report.vote_count }}</span></td>
+                        <td><span class="badge status-{{ report.status|lower }}">{{ report.get_status_display }}</span></td>
+                        <td>{{ report.created_at|date:"M d, Y" }}</td>
+                        <td>
+                            <a href="{% url 'dispatch_resolve' report.pk %}" class="btn btn-secondary" style="padding: 0.4rem 0.75rem;">
+                                Review / Resolve
+                            </a>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="7" style="text-align: center; color: var(--ink-muted); padding: 1.5rem;">
+                            No hazard reports match your filter criteria.
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

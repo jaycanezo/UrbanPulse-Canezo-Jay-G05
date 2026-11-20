@@ -2,8 +2,8 @@ from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
-from django.db.models import Count
-from django.shortcuts import get_object_or_404, redirect
+from django.db.models import Case, Count, IntegerField, Q, Value, When
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.views import View
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
@@ -11,7 +11,7 @@ from django.views.generic import CreateView, DeleteView, DetailView, ListView, U
 from accounts.mixins import RoleRequiredMixin
 from accounts.models import CustomUser
 
-from .forms import HazardReportForm, ReportFilterForm
+from .forms import AdminStatusUpdateForm, HazardReportForm, ReportFilterForm
 from .models import HazardReport, PowerUpVote, ReportAttachment, TicketStatusHistory
 
 
@@ -249,3 +249,107 @@ class PowerUpVoteToggleView(RoleRequiredMixin, View):
         if next_url and next_url.startswith("/"):
             return redirect(next_url)
         return redirect("report_detail", pk=report.pk)
+
+
+class DispatchQueueView(RoleRequiredMixin, ListView):
+    """LGU Admin queue prioritizing unresolved hazard reports by community votes."""
+
+    allowed_role = CustomUser.Role.ADMIN
+    template_name = "reports/dispatch_queue.html"
+    context_object_name = "reports"
+
+    def get_queryset(self):
+        qs = (
+            HazardReport.objects.select_related("user", "barangay", "category")
+            .annotate(
+                vote_count=Count("votes", distinct=True),
+                is_open=Case(
+                    When(
+                        status__in=[
+                            HazardReport.Status.PENDING,
+                            HazardReport.Status.REVIEW,
+                            HazardReport.Status.SCHEDULED,
+                        ],
+                        then=Value(0),
+                    ),
+                    default=Value(1),
+                    output_field=IntegerField(),
+                ),
+            )
+        )
+        params = self.request.GET
+        barangay_id = params.get("barangay")
+        category_id = params.get("category")
+        status = params.get("status")
+        query = (params.get("q") or "").strip()
+
+        if barangay_id and barangay_id.isdigit():
+            qs = qs.filter(barangay_id=int(barangay_id))
+        if category_id and category_id.isdigit():
+            qs = qs.filter(category_id=int(category_id))
+        if status and status in HazardReport.Status.values:
+            qs = qs.filter(status=status)
+        if query:
+            qs = qs.filter(
+                Q(landmark_desc__icontains=query)
+                | Q(barangay__name__icontains=query)
+                | Q(category__name__icontains=query)
+            )
+
+        sort = params.get("sort")
+        if sort == "newest":
+            return qs.order_by("-created_at")
+        return qs.order_by("is_open", "-vote_count", "created_at")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["filter_form"] = ReportFilterForm(self.request.GET or None)
+        context["search_query"] = (self.request.GET.get("q") or "").strip()
+        return context
+
+
+class AdminReportResolveView(RoleRequiredMixin, View):
+    """LGU Admin workspace to review, update, and resolve a hazard ticket (BR-08)."""
+
+    allowed_role = CustomUser.Role.ADMIN
+    template_name = "reports/dispatch_resolve.html"
+
+    def _get_report(self, pk):
+        return get_object_or_404(
+            HazardReport.objects.select_related("user", "barangay", "category")
+            .prefetch_related("attachments", "status_history__changed_by")
+            .annotate(vote_count=Count("votes", distinct=True)),
+            pk=pk,
+        )
+
+    def get(self, request, pk, *args, **kwargs):
+        report = self._get_report(pk)
+        form = AdminStatusUpdateForm(current_status=report.status)
+        return render(request, self.template_name, {"report": report, "form": form})
+
+    def post(self, request, pk, *args, **kwargs):
+        report = self._get_report(pk)
+        form = AdminStatusUpdateForm(request.POST, current_status=report.status)
+        if not form.is_valid():
+            messages.error(request, "Please fix the errors in the status update form.")
+            return render(request, self.template_name, {"report": report, "form": form})
+
+        new_status = form.cleaned_data["new_status"]
+        remarks = form.cleaned_data["remarks"]
+        with transaction.atomic():
+            old_status = report.status
+            report.status = new_status
+            report.save(update_fields=["status", "updated_at"])
+            TicketStatusHistory.objects.create(
+                report=report,
+                changed_by=request.user,
+                old_status=old_status,
+                new_status=new_status,
+                remarks=remarks or None,
+            )
+
+        messages.success(
+            request,
+            f"Report #{report.report_id} updated from {old_status} to {report.get_status_display()}.",
+        )
+        return redirect("dispatch_resolve", pk=report.pk)

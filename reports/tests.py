@@ -191,3 +191,107 @@ class CitizenHazardReportTests(TestCase):
         self.citizen_a.delete()
         report.refresh_from_db()
         self.assertIsNone(report.user)
+
+
+class AdminDispatchResolutionTests(TestCase):
+    def setUp(self):
+        self.citizen = User.objects.create_user(
+            username="citizen_one",
+            email="citizen1@example.com",
+            password="StrongPassword123!",
+            first_name="Carla",
+            last_name="Lim",
+            barangay="Lahug",
+            role=User.Role.CITIZEN,
+        )
+        self.admin = User.objects.create_user(
+            username="lgu_dispatcher",
+            email="dispatcher@lgu.gov.ph",
+            password="StrongPassword123!",
+            first_name="Marco",
+            last_name="Diaz",
+            department="City Engineering",
+            role=User.Role.ADMIN,
+        )
+        self.barangay = Barangay.objects.first()
+        self.category = HazardCategory.objects.first()
+        self.report = HazardReport.objects.create(
+            user=self.citizen,
+            barangay=self.barangay,
+            category=self.category,
+            landmark_desc="Major pothole in front of Lahug Elementary School",
+        )
+
+    def test_citizen_cannot_access_dispatch_routes(self):
+        self.client.force_login(self.citizen)
+        self.assertEqual(self.client.get(reverse("dispatch_queue")).status_code, 403)
+        self.assertEqual(
+            self.client.get(reverse("dispatch_resolve", kwargs={"pk": self.report.pk})).status_code,
+            403,
+        )
+
+    def test_admin_can_filter_queue_and_resolve_ticket_with_audit_history(self):
+        self.client.force_login(self.admin)
+
+        res_queue = self.client.get(reverse("dispatch_queue"), {"q": "Lahug"})
+        self.assertEqual(res_queue.status_code, 200)
+        self.assertContains(res_queue, f"#{self.report.report_id}")
+
+        # Reject no-op same status
+        res_noop = self.client.post(
+            reverse("dispatch_resolve", kwargs={"pk": self.report.pk}),
+            {"new_status": HazardReport.Status.PENDING, "remarks": ""},
+        )
+        self.assertEqual(res_noop.status_code, 200)
+        self.assertContains(res_noop, "Please choose a different status than the current one.")
+
+        # Reject RESOLVED without remarks
+        res_no_remarks = self.client.post(
+            reverse("dispatch_resolve", kwargs={"pk": self.report.pk}),
+            {"new_status": HazardReport.Status.RESOLVED, "remarks": ""},
+        )
+        self.assertEqual(res_no_remarks.status_code, 200)
+        self.assertContains(
+            res_no_remarks,
+            "Please provide resolution or cancellation remarks for citizen transparency.",
+        )
+
+        # Reject HTML brackets in remarks
+        res_bad_remarks = self.client.post(
+            reverse("dispatch_resolve", kwargs={"pk": self.report.pk}),
+            {"new_status": HazardReport.Status.REVIEW, "remarks": "<script>x</script>"},
+        )
+        self.assertEqual(res_bad_remarks.status_code, 200)
+        self.assertContains(res_bad_remarks, "Angle brackets")
+
+        # Transition PENDING -> REVIEW -> RESOLVED
+        res_review = self.client.post(
+            reverse("dispatch_resolve", kwargs={"pk": self.report.pk}),
+            {"new_status": HazardReport.Status.REVIEW, "remarks": "Assigned inspection team."},
+            follow=True,
+        )
+        self.assertRedirects(
+            res_review, reverse("dispatch_resolve", kwargs={"pk": self.report.pk})
+        )
+
+        res_resolved = self.client.post(
+            reverse("dispatch_resolve", kwargs={"pk": self.report.pk}),
+            {
+                "new_status": HazardReport.Status.RESOLVED,
+                "remarks": "Asphalt patched and road reopened to traffic.",
+            },
+            follow=True,
+        )
+        self.assertRedirects(
+            res_resolved, reverse("dispatch_resolve", kwargs={"pk": self.report.pk})
+        )
+
+        self.report.refresh_from_db()
+        self.assertEqual(self.report.status, HazardReport.Status.RESOLVED)
+        history = list(self.report.status_history.all())
+        self.assertEqual(len(history), 2)
+        self.assertEqual(history[0].old_status, HazardReport.Status.REVIEW)
+        self.assertEqual(history[0].new_status, HazardReport.Status.RESOLVED)
+        self.assertEqual(history[0].changed_by, self.admin)
+        self.assertEqual(history[1].old_status, HazardReport.Status.PENDING)
+        self.assertEqual(history[1].new_status, HazardReport.Status.REVIEW)

@@ -82,4 +82,24 @@ class AdminPanelView(RoleRequiredMixin, TemplateView):
             CustomUser.objects.exclude(barangay="").values("barangay").distinct().count()
         )
         context["recent_users"] = CustomUser.objects.order_by("-date_joined")[:6]
+
+        all_reports = HazardReport.objects.all()
+        context["total_reports"] = all_reports.count()
+        context["pending_reports"] = all_reports.filter(status=HazardReport.Status.PENDING).count()
+        context["in_progress_reports"] = all_reports.filter(
+            status__in=[HazardReport.Status.REVIEW, HazardReport.Status.SCHEDULED]
+        ).count()
+        context["resolved_reports"] = all_reports.filter(status=HazardReport.Status.RESOLVED).count()
+        context["priority_reports"] = (
+            all_reports.filter(
+                status__in=[
+                    HazardReport.Status.PENDING,
+                    HazardReport.Status.REVIEW,
+                    HazardReport.Status.SCHEDULED,
+                ]
+            )
+            .select_related("barangay", "category")
+            .annotate(vote_count=Count("votes", distinct=True))
+            .order_by("-vote_count", "created_at")[:5]
+        )
         return context
