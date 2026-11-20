@@ -12,11 +12,12 @@
         </div>
         <h1 class="page-title">Welcome, {{ user.first_name|default:user.username }}</h1>
         <p class="page-subtitle">
-            Your neighborhood portal for transparent public infrastructure updates with your Local Government Unit.
+            Report neighborhood hazards, power up community priorities, and follow municipal repairs.
         </p>
     </div>
     <div class="hero-actions">
-        <a href="{% url 'profile_edit' %}" class="btn btn-primary">Edit Profile</a>
+        <a href="{% url 'report_create' %}" class="btn btn-primary">+ Report a Hazard</a>
+        <a href="{% url 'report_list' %}" class="btn btn-secondary">Community Feed</a>
     </div>
 </section>
 
@@ -26,13 +27,13 @@
         <div class="kpi-value" style="font-size: 1.35rem;">
             {% if user.barangay %}Brgy. {{ user.barangay }}{% else %}Not Set{% endif %}
         </div>
-        <span class="kpi-meta">Barangay for local hazard routing</span>
+        <span class="kpi-meta">Default neighborhood profile</span>
     </div>
 
     <div class="kpi-card">
-        <span class="kpi-label">Role</span>
-        <div class="kpi-value" style="font-size: 1.35rem;">{{ user.get_role_display }}</div>
-        <span class="kpi-meta">Member since {{ user.date_joined|date:"M d, Y" }}</span>
+        <span class="kpi-label">My Reports</span>
+        <div class="kpi-value">{{ my_reports_count }}</div>
+        <span class="kpi-meta">{{ my_pending_count }} pending &bull; {{ my_resolved_count }} resolved</span>
     </div>
 
     <div class="kpi-card">
@@ -46,17 +47,52 @@
     <div class="card">
         <div class="card-header">
             <div>
-                <h2 class="card-title">Hazard Reports</h2>
-                <p class="card-subtitle">Submit concerns and power up neighborhood priorities</p>
+                <h2 class="card-title">My Hazard Reports</h2>
+                <p class="card-subtitle">Your latest submissions and their LGU status</p>
             </div>
-            <span class="badge badge-teal">Coming in Phase 2</span>
+            <a href="{% url 'report_list' %}?scope=mine" class="btn btn-ghost">View All</a>
         </div>
 
-        <div class="empty-state">
-            <p style="margin: 0; font-size: 0.92rem; color: var(--ink-secondary);">
-                Your Citizen account is active and ready. Once the hazard reporting module launches, you will be able to submit photo-verified infrastructure issues, cast community power-up votes, and track live LGU repair statuses right here.
-            </p>
-        </div>
+        {% if recent_my_reports %}
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Ticket</th>
+                            <th>Barangay</th>
+                            <th>Status</th>
+                            <th>Votes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for report in recent_my_reports %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'report_detail' report.pk %}">
+                                        <strong>#{{ report.report_id }} &mdash; {{ report.category.name }}</strong>
+                                    </a>
+                                    <div style="font-size: 0.78rem; color: var(--ink-muted);">
+                                        {{ report.landmark_desc|truncatechars:60 }}
+                                    </div>
+                                </td>
+                                <td>{{ report.barangay.name }}</td>
+                                <td>
+                                    <span class="badge status-{{ report.status|lower }}">{{ report.get_status_display }}</span>
+                                </td>
+                                <td>{{ report.vote_count }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <p style="margin: 0 0 0.85rem; font-size: 0.92rem; color: var(--ink-secondary);">
+                    You haven't submitted any hazard reports yet. Spot a pothole, broken streetlight, or clogged drain? Submit it to your LGU now.
+                </p>
+                <a href="{% url 'report_create' %}" class="btn btn-primary">Submit Your First Report</a>
+            </div>
+        {% endif %}
     </div>
 
     <aside class="card">

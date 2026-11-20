@@ -1,18 +1,12 @@
-from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db.models import Count
 from django.shortcuts import redirect
 from django.views import View
 from django.views.generic import TemplateView
 
+from accounts.mixins import RoleRequiredMixin
 from accounts.models import CustomUser
-
-
-class RoleRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
-    """Restricts a view to users with a specific role."""
-
-    allowed_role = None
-
-    def test_func(self):
-        return (self.request.user.role or "").upper() == self.allowed_role
+from reports.models import HazardReport
 
 
 class RoleRedirectView(LoginRequiredMixin, View):
@@ -57,10 +51,19 @@ class CitizenDashboardView(RoleRequiredMixin, TemplateView):
         ]
         completed_steps = sum(1 for item in checklist if item["done"])
         total_steps = len(checklist)
+        my_reports = HazardReport.objects.filter(user=user)
         context["checklist"] = checklist
         context["completed_steps"] = completed_steps
         context["total_steps"] = total_steps
         context["completion_pct"] = int((completed_steps / total_steps) * 100)
+        context["my_reports_count"] = my_reports.count()
+        context["my_pending_count"] = my_reports.filter(status=HazardReport.Status.PENDING).count()
+        context["my_resolved_count"] = my_reports.filter(status=HazardReport.Status.RESOLVED).count()
+        context["recent_my_reports"] = (
+            my_reports.select_related("barangay", "category")
+            .annotate(vote_count=Count("votes", distinct=True))
+            .order_by("-created_at")[:5]
+        )
         return context
 
 
