@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Hazard Feed | Urban Pulse{% endblock %}
+
+{% block content %}
+<section class="page-header">
+    <div>
+        <div class="page-meta">
+            <span class="badge badge-teal">Community Reports</span>
+        </div>
+        <h1 class="page-title">Neighborhood Hazard Feed</h1>
+        <p class="page-subtitle">
+            Browse local infrastructure concerns, power up urgent issues, or manage your own reports.
+        </p>
+    </div>
+    <div class="hero-actions">
+        <a href="{% url 'report_create' %}" class="btn btn-primary">+ Report a Hazard</a>
+    </div>
+</section>
+
+<div class="tab-row">
+    <a href="{% url 'report_list' %}?scope=all" class="tab-pill {% if scope != 'mine' %}active{% endif %}">
+        Community Feed
+    </a>
+    <a href="{% url 'report_list' %}?scope=mine" class="tab-pill {% if scope == 'mine' %}active{% endif %}">
+        My Reports
+    </a>
+</div>
+
+<form method="get" class="card filter-bar">
+    {% if scope == 'mine' %}
+        <input type="hidden" name="scope" value="mine">
+    {% endif %}
+    <div class="field-group">
+        <label for="id_barangay" class="field-label">Barangay</label>
+        {{ filter_form.barangay }}
+    </div>
+    <div class="field-group">
+        <label for="id_category" class="field-label">Category</label>
+        {{ filter_form.category }}
+    </div>
+    <div class="field-group">
+        <label for="id_status" class="field-label">Status</label>
+        {{ filter_form.status }}
+    </div>
+    <div class="field-group">
+        <label for="id_sort" class="field-label">Sort By</label>
+        {{ filter_form.sort }}
+    </div>
+    <div class="hero-actions">
+        <button type="submit" class="btn btn-secondary">Apply</button>
+        <a href="{% url 'report_list' %}{% if scope == 'mine' %}?scope=mine{% endif %}" class="btn btn-ghost">Reset</a>
+    </div>
+</form>
+
+<section class="report-list">
+    {% for report in reports %}
+        <article class="report-card">
+            <div class="report-main">
+                <div class="report-meta">
+                    <span class="badge status-{{ report.status|lower }}">{{ report.get_status_display }}</span>
+                    <span><strong>Brgy. {{ report.barangay.name }}</strong></span>
+                    <span>&bull;</span>
+                    <span>{{ report.created_at|date:"M d, Y" }}</span>
+                    <span>&bull;</span>
+                    <span>
+                        {% if report.user %}
+                            Reported by {{ report.user.first_name|default:report.user.username }}
+                        {% else %}
+                            Anonymous Citizen
+                        {% endif %}
+                    </span>
+                </div>
+                <h2 class="report-title">
+                    <a href="{% url 'report_detail' report.pk %}">
+                        #{{ report.report_id }} &mdash; {{ report.category.name }}
+                    </a>
+                </h2>
+                <p class="report-desc">{{ report.landmark_desc|truncatechars:180 }}</p>
+            </div>
+
+            <div class="report-actions">
+                {% if report.can_receive_votes %}
+                    <form method="post" action="{% url 'report_vote' report.pk %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                        <button
+                            type="submit"
+                            class="vote-btn {% if report.report_id in voted_report_ids %}voted{% endif %}"
+                            title="Power up this report"
+                        >
+                            <span>&#9650;</span>
+                            <span>{{ report.vote_count }} Power-Up{{ report.vote_count|pluralize }}</span>
+                        </button>
+                    </form>
+                {% else %}
+                    <span class="badge badge-slate">{{ report.vote_count }} Power-Up{{ report.vote_count|pluralize }}</span>
+                {% endif %}
+
+                <a href="{% url 'report_detail' report.pk %}" class="btn btn-ghost" style="padding: 0.4rem 0.75rem;">
+                    View Details
+                </a>
+            </div>
+        </article>
+    {% empty %}
+        <div class="card empty-state" style="text-align: center;">
+            <p style="margin: 0 0 1rem; color: var(--ink-secondary);">
+                No hazard reports match your current filter.
+            </p>
+            <a href="{% url 'report_create' %}" class="btn btn-primary">Submit the First Report</a>
+        </div>
+    {% endfor %}
+</section>
+{% endblock %}

@@ -59,6 +59,8 @@ class DashboardRoleIsolationTests(TestCase):
         self.assertEqual(res_admin.context["citizen_count"], 1)
         self.assertEqual(res_admin.context["admin_count"], 1)
         self.assertEqual(res_admin.context["barangay_count"], 1)
+        self.assertEqual(res_admin.context["total_reports"], 0)
+        self.assertEqual(res_admin.context["pending_reports"], 0)
 
         res_citizen = self.client.get(reverse("dashboard"))
         self.assertEqual(res_citizen.status_code, 403)
