@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block title %}Resolve Report #{{ report.report_id }} | Urban Pulse{% endblock %}
+
+{% block content %}
+<section class="page-header page-header-lgu">
+    <div>
+        <div class="page-meta">
+            <span class="badge status-{{ report.status|lower }}">{{ report.get_status_display }}</span>
+            <span class="badge badge-slate">Brgy. {{ report.barangay.name }}</span>
+            <span class="badge badge-amber">&#9650; {{ report.vote_count }} Power-Up{{ report.vote_count|pluralize }}</span>
+        </div>
+        <h1 class="page-title">Resolve Ticket #{{ report.report_id }} &mdash; {{ report.category.name }}</h1>
+        <p class="page-subtitle">
+            Reported on {{ report.created_at|date:"M d, Y H:i" }} by
+            {% if report.user %}
+                {{ report.user.get_full_name|default:report.user.username }} ({{ report.user.email }})
+            {% else %}
+                Anonymous Citizen
+            {% endif %}
+        </p>
+    </div>
+    <div class="hero-actions">
+        <a href="{% url 'dispatch_queue' %}" class="btn btn-secondary">Back to Queue</a>
+    </div>
+</section>
+
+<section class="workspace-grid">
+    <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+        <div class="card">
+            <h2 class="card-title" style="margin-bottom: 0.9rem;">Hazard Briefing</h2>
+
+            <div class="info-grid" style="margin-bottom: 0.9rem;">
+                <div class="info-tile">
+                    <div class="info-label">Barangay</div>
+                    <div class="info-value">{{ report.barangay.name }}</div>
+                </div>
+                <div class="info-tile">
+                    <div class="info-label">Category</div>
+                    <div class="info-value">{{ report.category.name }}</div>
+                </div>
+            </div>
+
+            <div class="info-tile">
+                <div class="info-label">Street &amp; Landmark Description</div>
+                <div class="info-value" style="font-weight: 500; white-space: pre-line;">{{ report.landmark_desc }}</div>
+            </div>
+
+            {% if report.attachments.all %}
+                <div style="margin-top: 1.15rem;">
+                    <div class="info-label">Photo Evidence</div>
+                    <div class="attachment-grid">
+                        {% for att in report.attachments.all %}
+                            <a href="{{ att.file_url.url }}" target="_blank" rel="noopener">
+                                <img src="{{ att.file_url.url }}" alt="Attachment #{{ att.attachment_id }}" class="attachment-thumb">
+                            </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <div>
+                    <h2 class="card-title">Status Audit Trail</h2>
+                    <p class="card-subtitle">Immutable history of administrative actions</p>
+                </div>
+            </div>
+
+            {% if report.status_history.all %}
+                <ul class="timeline">
+                    {% for log in report.status_history.all %}
+                        <li class="timeline-item">
+                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.3rem;">
+                                <span class="badge status-{{ log.new_status|lower }}">{{ log.get_new_status_display }}</span>
+                                <span style="font-size: 0.78rem; color: var(--ink-muted);">{{ log.changed_at|date:"M d, Y H:i" }}</span>
+                            </div>
+                            <div style="font-size: 0.84rem; color: var(--ink-secondary);">
+                                Changed from <strong>{{ log.get_old_status_display }}</strong> by
+                                {% if log.changed_by %}{{ log.changed_by.get_full_name|default:log.changed_by.username }}{% else %}System{% endif %}
+                            </div>
+                            {% if log.remarks %}
+                                <p style="margin: 0.35rem 0 0; font-size: 0.88rem; color: var(--ink-primary);">{{ log.remarks }}</p>
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <div class="empty-state">
+                    <p style="margin: 0; font-size: 0.88rem; color: var(--ink-secondary);">
+                        No dispatch updates recorded yet.
+                    </p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <aside class="card card-elevated">
+        <div class="card-header">
+            <div>
+                <h2 class="card-title">Update Ticket Status</h2>
+                <p class="card-subtitle">Every change is logged with your name and timestamp</p>
+            </div>
+        </div>
+
+        <form method="post" class="form-stack js-validated-form" novalidate>
+            {% csrf_token %}
+
+            <div class="field-group">
+                <label for="{{ form.new_status.id_for_label }}" class="field-label">
+                    {{ form.new_status.label }}
+                </label>
+                {{ form.new_status }}
+                {% for error in form.new_status.errors %}
+                    <span class="field-error">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="field-group">
+                <label for="{{ form.remarks.id_for_label }}" class="field-label">
+                    {{ form.remarks.label }}
+                </label>
+                {{ form.remarks }}
+                <span class="field-help">Required when marking a ticket Resolved or Cancelled (5-500 characters).</span>
+                {% for error in form.remarks.errors %}
+                    <span class="field-error">{{ error }}</span>
+                {% endfor %}
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block">Save Status Update</button>
+        </form>
+    </aside>
+</section>
+{% endblock %}
