@@ -1063,3 +1063,17 @@ body.auth-page {
     .report-card { flex-direction: column; }
     .report-actions { flex-direction: row; align-items: center; width: 100%; justify-content: space-between; }
 }
+
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 1.25rem;
+}
+
+.pagination-info {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--ink-secondary);
+}

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Server Error | Urban Pulse</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            background-color: #f6f8f9;
+            color: #0f172a;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            line-height: 1.55;
+        }
+        .error-card {
+            width: 100%;
+            max-width: 500px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 2.25rem 2rem;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+        }
+        .error-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 56px;
+            height: 56px;
+            border-radius: 14px;
+            background: #fef3c7;
+            color: #d97706;
+            font-size: 1.3rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+        }
+        h1 {
+            margin: 0 0 0.5rem;
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #0f172a;
+        }
+        p {
+            margin: 0 0 1.5rem;
+            color: #475569;
+            font-size: 0.95rem;
+        }
+        .btn {
+            display: inline-block;
+            padding: 0.65rem 1.2rem;
+            border-radius: 8px;
+            background: #0f4c5c;
+            color: #ffffff;
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-decoration: none;
+        }
+        .btn:hover { background: #0b3945; }
+    </style>
+</head>
+<body>
+    <main class="error-card">
+        <div class="error-badge">500</div>
+        <h1>Something Went Wrong</h1>
+        <p>
+            Urban Pulse encountered an unexpected server error while processing your request. Please try again in a moment.
+        </p>
+        <a href="/" class="btn">Return to Urban Pulse</a>
+    </main>
+</body>
+</html>
