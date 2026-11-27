@@ -497,6 +497,11 @@ a:hover {
     padding-right: 4.25rem;
 }
 
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+    display: none;
+}
+
 .password-toggle {
     position: absolute;
     right: 0.55rem;
