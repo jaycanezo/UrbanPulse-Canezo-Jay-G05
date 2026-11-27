@@ -497,6 +497,11 @@ a:hover {
     padding-right: 4.25rem;
 }
 
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+    display: none;
+}
+
 .password-toggle {
     position: absolute;
     right: 0.55rem;
@@ -1057,4 +1062,18 @@ body.auth-page {
     .filter-bar { grid-template-columns: 1fr 1fr; }
     .report-card { flex-direction: column; }
     .report-actions { flex-direction: row; align-items: center; width: 100%; justify-content: space-between; }
+}
+
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 1.25rem;
+}
+
+.pagination-info {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--ink-secondary);
 }
