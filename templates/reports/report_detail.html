@@ -35,7 +35,7 @@
 
         {% if is_owner and report.is_pending %}
             <a href="{% url 'report_update' report.pk %}" class="btn btn-secondary">Edit</a>
-            <form method="post" action="{% url 'report_cancel' report.pk %}">
+            <form method="post" action="{% url 'report_cancel' report.pk %}" data-confirm="Cancel this pending hazard report? Once cancelled, it can no longer be edited.">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-ghost">Cancel Report</button>
             </form>

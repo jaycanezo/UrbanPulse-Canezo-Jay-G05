@@ -37,7 +37,8 @@ class HazardReportForm(_CivicValidatedFormMixin, forms.ModelForm):
             ),
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, user=None, **kwargs):
+        self.user = user
         super().__init__(*args, **kwargs)
         self.fields["barangay"].queryset = Barangay.objects.all()
         self.fields["barangay"].empty_label = "Select your barangay"
@@ -63,6 +64,27 @@ class HazardReportForm(_CivicValidatedFormMixin, forms.ModelForm):
         if photo and hasattr(photo, "size"):
             validate_attachment_file(photo)
         return photo
+
+    def clean(self):
+        cleaned_data = super().clean()
+        barangay = cleaned_data.get("barangay")
+        category = cleaned_data.get("category")
+        landmark_desc = cleaned_data.get("landmark_desc")
+        if self.user and barangay and category and landmark_desc:
+            duplicate_qs = HazardReport.objects.filter(
+                user=self.user,
+                barangay=barangay,
+                category=category,
+                landmark_desc__iexact=landmark_desc,
+                status=HazardReport.Status.PENDING,
+            )
+            if self.instance and self.instance.pk:
+                duplicate_qs = duplicate_qs.exclude(pk=self.instance.pk)
+            if duplicate_qs.exists():
+                raise forms.ValidationError(
+                    "You already have an identical pending hazard report for this location."
+                )
+        return cleaned_data
 
 
 class ReportFilterForm(forms.Form):
@@ -127,6 +149,9 @@ class AdminStatusUpdateForm(_CivicValidatedFormMixin, forms.Form):
         cleaned_data = super().clean()
         new_status = cleaned_data.get("new_status")
         remarks = cleaned_data.get("remarks", "")
+
+        if self.current_status == HazardReport.Status.CANCELLED:
+            raise forms.ValidationError("Cancelled tickets are closed and cannot be updated.")
 
         if new_status and self.current_status and new_status == self.current_status:
             self.add_error(

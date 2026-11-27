@@ -124,6 +124,16 @@
             }
         });
 
+        document.addEventListener("submit", function (event) {
+            const confirmForm = event.target.closest("form[data-confirm]");
+            if (confirmForm) {
+                const promptText = confirmForm.getAttribute("data-confirm");
+                if (promptText && !window.confirm(promptText)) {
+                    event.preventDefault();
+                }
+            }
+        });
+
         const photoInput = document.querySelector(".js-photo-input");
         const photoPreview = document.querySelector(".js-photo-preview");
         if (photoInput && photoPreview) {

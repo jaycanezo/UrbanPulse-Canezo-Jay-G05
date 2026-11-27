@@ -5,6 +5,7 @@ from django.db import transaction
 from django.db.models import Case, Count, IntegerField, Q, Value, When
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views import View
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
@@ -40,6 +41,7 @@ class CommunityReportListView(RoleRequiredMixin, ListView):
     allowed_role = CustomUser.Role.CITIZEN
     template_name = "reports/report_list.html"
     context_object_name = "reports"
+    paginate_by = 15
 
     def get_queryset(self):
         qs = (
@@ -49,6 +51,8 @@ class CommunityReportListView(RoleRequiredMixin, ListView):
         )
         if self.request.GET.get("scope") == "mine":
             qs = qs.filter(user=self.request.user)
+        else:
+            qs = qs.exclude(status=HazardReport.Status.CANCELLED)
         return _filter_report_queryset(qs, self.request.GET)
 
     def get_context_data(self, **kwargs):
@@ -58,6 +62,9 @@ class CommunityReportListView(RoleRequiredMixin, ListView):
         context["voted_report_ids"] = set(
             PowerUpVote.objects.filter(user=self.request.user).values_list("report_id", flat=True)
         )
+        params = self.request.GET.copy()
+        params.pop("page", None)
+        context["filter_query"] = params.urlencode()
         return context
 
 
@@ -68,6 +75,11 @@ class HazardReportCreateView(RoleRequiredMixin, CreateView):
     model = HazardReport
     form_class = HazardReportForm
     template_name = "reports/report_form.html"
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["user"] = self.request.user
+        return kwargs
 
     def form_valid(self, form):
         with transaction.atomic():
@@ -104,6 +116,16 @@ class HazardReportDetailView(LoginRequiredMixin, DetailView):
             .prefetch_related("attachments", "status_history__changed_by")
             .annotate(vote_count=Count("votes", distinct=True))
         )
+
+    def get_object(self, queryset=None):
+        obj = super().get_object(queryset=queryset)
+        if (
+            obj.status == HazardReport.Status.CANCELLED
+            and not self.request.user.is_lgu_admin
+            and obj.user_id != self.request.user.pk
+        ):
+            raise PermissionDenied("You do not have permission to view this cancelled report.")
+        return obj
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -149,6 +171,11 @@ class HazardReportUpdateView(_OwnedCitizenReportMixin, UpdateView):
 
     def get_object(self, queryset=None):
         return self.object
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["user"] = self.request.user
+        return kwargs
 
     def form_valid(self, form):
         with transaction.atomic():
@@ -215,7 +242,8 @@ class HazardReportDeleteView(_OwnedCitizenReportMixin, DeleteView):
 
     def form_valid(self, form):
         report_id = self.object.report_id
-        response = super().form_valid(form)
+        with transaction.atomic():
+            response = super().form_valid(form)
         messages.success(self.request, f"Hazard report #{report_id} deleted.")
         return response
 
@@ -246,7 +274,11 @@ class PowerUpVoteToggleView(RoleRequiredMixin, View):
                 messages.success(request, f"Powered up report #{report.report_id}!")
 
         next_url = request.POST.get("next")
-        if next_url and next_url.startswith("/"):
+        if next_url and url_has_allowed_host_and_scheme(
+            url=next_url,
+            allowed_hosts={request.get_host()},
+            require_https=request.is_secure(),
+        ):
             return redirect(next_url)
         return redirect("report_detail", pk=report.pk)
 
@@ -257,6 +289,7 @@ class DispatchQueueView(RoleRequiredMixin, ListView):
     allowed_role = CustomUser.Role.ADMIN
     template_name = "reports/dispatch_queue.html"
     context_object_name = "reports"
+    paginate_by = 15
 
     def get_queryset(self):
         qs = (
@@ -305,6 +338,9 @@ class DispatchQueueView(RoleRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
         context["filter_form"] = ReportFilterForm(self.request.GET or None)
         context["search_query"] = (self.request.GET.get("q") or "").strip()
+        params = self.request.GET.copy()
+        params.pop("page", None)
+        context["filter_query"] = params.urlencode()
         return context
 
 
